@@ -1,0 +1,16 @@
+name = CMIS Views
+description = Displays a block of data returned from a CMIS repository  
+package = CMIS Views
+dependencies[] = cmis
+dependencies[] = cmis_query
+dependencies[] = ctools
+dependencies[] = cmis_common
+core = "7.x"
+configure = admin/config/cmis/views
+
+; Information added by drupal.org packaging script on 2013-01-31
+version = "7.x-1.0"
+core = "7.x"
+project = "cmis_views"
+datestamp = "1359650373"
+
