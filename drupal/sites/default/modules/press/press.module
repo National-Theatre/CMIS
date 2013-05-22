@@ -1,0 +1,116 @@
+<?php
+/**
+ * @file
+ * @copyright The Royal National Theatre
+ * @author John-Paul Drawneek
+ */
+
+/**
+ * Implements hook_menu().
+ */
+function press_menu() {
+  return array(
+    'press' => array(
+      'type' => MENU_NORMAL_ITEM,
+      'title' => t('CMIS Repository'),
+      'page callback' => 'press_browser_content_get', 
+      'access callback' => 'user_access', 
+      'access arguments' => array('access cmis'),
+    ),
+  );
+}
+/**
+ * Implements hook_theme().
+ *
+ * @param string $existing
+ *   An array of existing implementations that may be used for override
+ *   purposes.
+ * @param string $type
+ *   Whether a theme, module, etc. is being processed.
+ * @param string $theme
+ *   The actual name of theme, module, etc. that is being being processed.
+ * @param string $path
+ *   The directory path of the theme or module, so that it doesn't need to be
+ *   looked up.
+ *
+ * @return array
+ *   An associative array of theme hook information.
+ */
+function press_theme($existing, $type, $theme, $path) {
+  return array();
+}
+
+function press_browser_content_get() {
+  module_load_include('api.inc', 'cmis');
+  module_load_include('utils.inc', 'cmis_browser');
+  module_load_include('content_get.inc', 'cmis_browser');
+  
+  // Invoke CMIS service
+  try {
+    $repository = cmis_get_repository();    
+    $object = _press_browser_content_object_from_request($repository);
+    
+    switch ($object->properties['cmis:baseTypeId']) {
+      case 'cmis:document': 
+        return _cmis_browser_content_get_document($repository, $object);
+        break;
+      case 'cmis:folder':
+        return _cmis_browser_content_get_folder($repository, $object, array_slice(explode('/', $_GET['q']), 2));
+        break;
+      default:
+        throw new CMISException(t('Unable to handle cmis object @object_id of type @object_type', array(
+          '@object_id' => $object->id,
+          '@object_type' => $object->type
+        )));
+    }
+  }
+  catch (CMISException $e) {
+    cmis_error_handler('cmis_browser', $e);
+    return '';
+  }  
+}
+function _press_browser_content_object_from_request($repository) {
+  $object_id = NULL;
+  $object_path = NULL;
+  $bcarray = array_slice(explode('/', $_GET['q']), 2);
+  array_unshift($bcarray, 'documentLibrary');
+  array_unshift($bcarray, 'ntlive');
+  array_unshift($bcarray, 'Sites');
+  if (count($bcarray) == 0 ){
+    $bcarray = array_slice(explode('/', variable_get('cmis_browser_root')), 0);
+  }
+
+  if (array_key_exists('id', $_GET)) {
+    // grab objectId from GET
+    $object_id = urldecode($_GET['id']);
+  } 
+  elseif (!empty($bcarray)) {
+    // grab path 
+    $object_path = drupal_encode_path('/'. implode('/', $bcarray));
+  } 
+  elseif (array_key_exists('browser_default_folderId', $repository->settings)) {
+    // grab default folderId from repository's settings
+    $object_id = $repository->settings['browser_default_folderId'];
+  }
+  elseif (array_key_exists('browser_default_folderPath', $repository->settings)) {
+    // grab default folderPath from repository's settings
+    $object_path = drupal_encode_path($repository->settings['browser_default_folderPath']);
+  }
+  else {
+    // fallback to repository's root folderId
+    $object_id = $repository->info->repositoryInfo['cmis:rootFolderId'];
+  }
+  
+  if (!is_null($object_id)) {
+    $object = cmisapi_getProperties($repository->repositoryId, $object_id);
+  }
+  elseif (!is_null($object_path)) {
+    $object = cmisapi_getObjectByPath($repository->repositoryId, $object_path);
+  }
+  else {
+    throw new CMISException('Unknown CMIS object');
+  }
+
+  return $object;
+}
+

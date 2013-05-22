@@ -1,0 +1,12 @@
+name = press
+description = This is required and needs replacing.
+core = 7.x
+; stylesheets[all][] =
+; scripts[] =
+; files[] =
+dependencies[] = cmis
+; package =
+php = 5.2
+version = 7.x-1.0 
+; configure =
+

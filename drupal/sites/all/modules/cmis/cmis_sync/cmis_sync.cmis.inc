@@ -97,6 +97,7 @@ function _cmis_sync_cmis_drupal_handle_updates($repository, $sync_map_type, $nod
     $drupal_node->cmis_sync_disabled = TRUE;
     
     // save Drupal node
+//    die('<pre>' . print_r($drupal_node, TRUE) . '</pre>');
     node_save($drupal_node);
     
     // update/insert changed timestamp
@@ -179,6 +180,7 @@ function _cmis_sync_cmis_drupal_handle_deletes($repository, $sync_map_type, $nod
  *  Add workflow properties
  */
 function _cmis_sync_cmis_drupal_prepare($repository, $sync_map_type, $node_type, $cmis_object) {
+//  die('<pre>' . print_r($cmis_object->properties, TRUE) .' </pre>');
   module_load_include('api.inc', 'cmis');
   
   if ($sync_map_type['enabled']) {
@@ -200,18 +202,41 @@ function _cmis_sync_cmis_drupal_prepare($repository, $sync_map_type, $node_type,
     
     // load Drupal node
     $node = node_load($drupal_nid);
+    if ($node === FALSE) {
+      $node = new \stdClass();
+      $node->language = LANGUAGE_NONE;
+      $node->status = 1;
+    }
     $node->type = $node_type;
-    
+    if ($node_type == 'cmis_image'
+      && strpos($cmis_object->properties['cmis:contentStreamMimeType'], 'image/') === FALSE) {
+      return FALSE;
+    }
+    elseif ($node_type == 'cmis_video'
+      && strpos($cmis_object->properties['cmis:contentStreamMimeType'], 'video/') === FALSE) {
+      return FALSE;
+    }
+    elseif ($node_type != 'cmis_image' && strpos($cmis_object->properties['cmis:contentStreamMimeType'], 'image/') !== FALSE) {
+      return FALSE;
+    }
+    elseif ($node_type != 'cmis_video' && strpos($cmis_object->properties['cmis:contentStreamMimeType'], 'video/') !== FALSE) {
+      return FALSE;
+    }
     // map cmis properties to drupal node fields    
     foreach ($sync_map_type['fields'] as $node_field => $cmis_field) {
       if (is_string($cmis_field)) {
-        _cmis_sync_drupal_node_field_value($node, $node_field, $cmis_object->properties[$cmis_field]);
+        _cmis_sync_drupal_node_field_value($node, $node_field, $cmis_object->properties[$cmis_field], array('object' => $cmis_object));
       }
       elseif (is_array($cmis_field)) {
         if (array_key_exists('cmis to drupal', $cmis_field) && $cmis_field['cmis to drupal'] === FALSE) {
           continue;
         }
-        _cmis_sync_drupal_node_field_value($node, $cmis_field['drupal'], $cmis_object->properties[$cmis_field['cmis']]);
+        _cmis_sync_drupal_node_field_value(
+          $node,
+          $cmis_field['drupal'],
+          $cmis_object->properties[$cmis_field['cmis']],
+          array('object' => $cmis_object)
+        );
       }
       else {
         throw new CMISException(t('Unknown field map type. Expects "string" or "array". Received "@type"',
@@ -224,9 +249,8 @@ function _cmis_sync_cmis_drupal_prepare($repository, $sync_map_type, $node_type,
       $node->title = $cmis_object->properties['cmis:name'];
     }
     
-    
     // load content field
-    if (array_key_exists('content_field', $sync_map_type)) {
+    if (array_key_exists('content_field', $sync_map_type) && $sync_map_type['content_field']) {
       $cmis_content_context = array();
       $cmis_content_context['file'] = array('mime' => $cmis_object->properties['cmis:contentStreamMimeType']);
       
