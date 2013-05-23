@@ -206,8 +206,9 @@ function _cmis_sync_cmis_drupal_prepare($repository, $sync_map_type, $node_type,
       $node = new \stdClass();
       $node->language = LANGUAGE_NONE;
       $node->status = 1;
+      $node->type = $node_type;
     }
-    $node->type = $node_type;
+    
     if ($node_type == 'cmis_image'
       && strpos($cmis_object->properties['cmis:contentStreamMimeType'], 'image/') === FALSE) {
       return FALSE;

@@ -1,0 +1,38 @@
+<?php
+/**
+ * @file
+ * @copyright The Royal National Theatre
+ * @author John-Paul Drawneek
+ */
+
+/**
+ * Implements hook_schema().
+ */
+function import_folders_schema() {
+  return array();
+}
+/**
+ * Implements hook_field_schema().
+ */
+function import_folders_field_schema($field) {
+
+}
+/**
+ * Implements hook_install().
+ */
+function import_folders_install() {
+  $vocab = new \stdClass();
+  $vocab->name = "CMIS Folders";
+  $vocab->machine_name = "cmis_folders";
+  $vocab->description = "Maps drupal nodes to their cmis folder";
+  $vocab->hierarchy = 0;
+  taxonomy_vocabulary_save($vocab);
+}
+/**
+ * Implements hook_uninstall().
+ */
+function import_folders_uninstall() {
+  $vocab = taxonomy_vocabulary_machine_name_load('cmis_folders');
+  taxonomy_vocabulary_delete($vocab->vid);
+  variable_del('import_folders_cmis_root');
+}

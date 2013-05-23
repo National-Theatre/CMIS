@@ -262,10 +262,10 @@ function _cmis_sync_drupal_node_field_value(&$node, $field_name, $field_value = 
           break;
 
         case 'text_textfield':
-          if ($field_value == NULL) {
+          if ($field_value == NULL && !empty($content_field)) {
             $value = $content_field[LANGUAGE_NONE][0]['value'];
           }
-          else {
+          elseif ($field_value != NULL) {
             $node->$field_name = array();
             $node->{$field_name}[LANGUAGE_NONE][0]['value'] = $field_value;
           }

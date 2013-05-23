@@ -1,0 +1,31 @@
+<?php
+/**
+ * @file
+ * @copyright The Royal National Theatre
+ * @author John-Paul Drawneek
+ */
+
+/**
+ * Implements hook_schema().
+ */
+function import_production_schema() {
+  return array();
+}
+/**
+ * Implements hook_field_schema().
+ */
+function import_production_field_schema($field) {
+
+}
+/**
+ * Implements hook_install().
+ */
+function import_production_install() {
+
+}
+/**
+ * Implements hook_uninstall().
+ */
+function import_production_uninstall() {
+
+}

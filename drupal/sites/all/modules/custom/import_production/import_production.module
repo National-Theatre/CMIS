@@ -1,0 +1,43 @@
+<?php
+/**
+ * @file
+ * @copyright The Royal National Theatre
+ * @author John-Paul Drawneek
+ */
+
+/**
+ * Implements hook_menu().
+ */
+function import_production_menu() {
+  return array();
+}
+/**
+ * Implements hook_theme().
+ */
+function import_production_theme($existing, $type, $theme, $path) {
+  return array();
+}
+/**
+ * Implements hook_cron().
+ */
+function import_production_cron() {
+  $vocab = taxonomy_vocabulary_machine_name_load('cmis_folders');
+  $productions = taxonomy_get_tree($vocab->vid, 0, 1, TRUE);
+  foreach ($productions as $prod) {
+    $query = new \EntityFieldQuery();
+    $query->entityCondition('entity_type', 'node')
+      ->entityCondition('bundle', 'production_page')
+      ->fieldCondition('field_tid_of_production', 'value', $prod->tid);
+    $result = $query->execute();
+    if (!isset($result['node'])) {
+      $node = new \stdClass();
+      $node->language = LANGUAGE_NONE;
+      $node->status = 1;
+      $node->title = $prod->name;
+      $node->type = 'production_page';
+      $node->field_tid_of_production[LANGUAGE_NONE][0]['value'] = $prod->tid;
+      node_submit($node);
+      node_save($node);
+    }
+  }
+}

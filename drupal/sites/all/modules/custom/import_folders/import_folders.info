@@ -1,0 +1,13 @@
+name = Import Folders
+description = This is required and needs replacing.
+core = 7.x
+; stylesheets[all][] =
+; scripts[] =
+; files[] =
+dependencies[] = cmis
+dependencies[] = taxonomy
+package = CMIS
+php = 5.3
+version = 7.x-1.0 
+; configure =
+

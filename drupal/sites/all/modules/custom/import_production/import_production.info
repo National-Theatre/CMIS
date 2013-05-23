@@ -1,0 +1,12 @@
+name = Import Production
+description = This is required and needs replacing.
+core = 7.x
+; stylesheets[all][] =
+; scripts[] =
+; files[] =
+dependencies[] = import_folders
+; package =
+php = 5.3
+version = 7.x-1.0 
+; configure =
+
