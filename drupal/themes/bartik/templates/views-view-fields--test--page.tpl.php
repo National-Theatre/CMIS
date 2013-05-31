@@ -23,38 +23,13 @@
  *
  * @ingroup views_templates
  */
-function bytesToSize($bytes, $precision = 2)
-{  
-    $kilobyte = 1024;
-    $megabyte = $kilobyte * 1024;
-    $gigabyte = $megabyte * 1024;
-    $terabyte = $gigabyte * 1024;
-   
-    if (($bytes >= 0) && ($bytes < $kilobyte)) {
-        return $bytes . ' B';
- 
-    } elseif (($bytes >= $kilobyte) && ($bytes < $megabyte)) {
-        return round($bytes / $kilobyte, $precision) . ' KB';
- 
-    } elseif (($bytes >= $megabyte) && ($bytes < $gigabyte)) {
-        return round($bytes / $megabyte, $precision) . ' MB';
- 
-    } elseif (($bytes >= $gigabyte) && ($bytes < $terabyte)) {
-        return round($bytes / $gigabyte, $precision) . ' GB';
- 
-    } elseif ($bytes >= $terabyte) {
-        return round($bytes / $terabyte, $precision) . ' TB';
-    } else {
-        return $bytes . ' B';
-    }
-}
 ?>
 <?php foreach ($fields as $id => $field): ?>
   <?php if ($id == 'field_size'): ?>
 <div class="views-field views-field-field-size">
   Size: <?php print bytesToSize($row->field_field_size[0]['raw']['value']); ?>
 </div>
-  <?php elseif ($id == 'field_cmis_file'): ?>
+  <?php elseif ($id == 'field_cmis_file' || $id == 'field_video'): ?>
   <?php
   $file = new \stdClass();
   $file->filemime = $row->field_field_mimetype[0]['raw']['value'];
@@ -65,6 +40,28 @@ function bytesToSize($bytes, $precision = 2)
   print theme_file_icon($variables);
   ?>
   <?php print $field->content; ?>
+  <?php elseif ($id == 'field_image' && key_exists('field_file', $fields)): ?>
+  <?php 
+  $img = $row->field_field_image[0]['raw'];
+  $vid = $row->field_field_file[0]['raw'];
+  unset($fields['field_video']);
+  ?>
+  <div class="video-preview">
+    <a href="#"><img src="<?php print image_style_url('thumbnail', $img['uri']);?>" alt="Preview" /></a>
+    <div class="video" style="display: none;">
+      <video width="320" height="240" poster="<?php print image_style_url('large', $img['uri']);?>" controls="controls" preload="none">
+        <source type="video/mp4" src="<?php print file_create_url($vid['uri']);?>" />
+        <object width="320" height="240" type="application/x-shockwave-flash" data="<?php print file_create_url(drupal_get_path('module', 'import_production') . '/swf/flashmediaelement.swf');?>">
+            <param name="movie" value="<?php print file_create_url(drupal_get_path('module', 'import_production') . '/swf/flashmediaelement.swf');?>" />
+            <param name="flashvars" value="controls=true&file=<?php print file_create_url($vid['uri']);?>" />
+            <!-- Image as a last resort -->
+            <img src="<?php print image_style_url('large', $img['uri']);?>" width="320" height="240" title="No video playback capabilities" />
+        </object>
+      </video>
+    </div>
+      
+  </div>
+  <?php elseif ($id == 'field_file' && key_exists('field_image', $fields)): ?>
   <?php else: ?>
   <?php if (!empty($field->separator)): ?>
     <?php print $field->separator; ?>

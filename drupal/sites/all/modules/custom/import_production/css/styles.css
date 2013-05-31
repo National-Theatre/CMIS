@@ -1,0 +1,22 @@
+/* 
+    Document   : styles
+    Created on : 30-May-2013, 17:36:50
+    Author     : John-Paul Drawneek <jdrawneek@nationaltheatre.org.uk>
+    Description:
+        Purpose of the stylesheet follows.
+*/
+
+.node-production-page td img.file-icon {
+    float: left;
+    padding-right: 5px;
+}
+
+.node-production-page .field-content a {
+/*    word-wrap: break-word;
+    width: 95%;*/
+}
+
+.node-production-page .views-view-grid td {
+    width: 50%;
+    overflow-x: hidden;
+}
