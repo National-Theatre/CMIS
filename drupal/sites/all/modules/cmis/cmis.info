@@ -4,7 +4,7 @@ package = CMIS
 core = "7.x"
 project = "cmis"
 ; Information added by drupal.org packaging script on 2013-02-23
-version = "7.x-1.2"
+version = "7.x-1.3"
 core = "7.x"
 project = "cmis"
 datestamp = "1361648500"
