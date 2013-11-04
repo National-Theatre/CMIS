@@ -92,6 +92,10 @@ function cmis_views_admin_settings() {
   if (variable_get('cmis_views_theme') != '') {
     $dftheme = variable_get('cmis_views_theme');
   }
+  
+  if (variable_get('cmis_views_thumbnails') != '') {
+    $thumbnails = variable_get('cmis_views_thumbnails');
+  }
 
   $themes = _cmis_views_theme_types();
 
@@ -100,6 +104,13 @@ function cmis_views_admin_settings() {
     '#title' => t('Select a default theme for this CMIS views:'),
     '#options' => $themes,
     '#default_value' => $dftheme,
+  );
+  
+  $form['cmis_views_settings']['cmis_views_thumbnails'] = array(
+    '#type' => 'checkbox',
+    '#title' => t('Use cmis:thumbnail for thumbnails whenever available'),
+    '#description' => t('Thumbnails will be the first page of actual document if selected, otherwise they will default to generic filetype icons'),
+    '#default_value' => $thumbnails,
   );
 
   return system_settings_form($form);

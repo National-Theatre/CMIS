@@ -305,7 +305,6 @@ function cmis_views_field_validate($entity_type, $entity, $field, $instance, $la
   foreach ($items as $delta => $item) {
     if (!empty($item['cmis_views'])) {
       /* Check that this is a valid folder path and that we can get a UUID of a folder to store - if not throw an error */
-      //debug('UUID IS: ' ._cmis_views_content_object_from_path($repository, $item['cmis_views']));
 /*      
         $errors[$field['field_name']][$langcode][$delta][] = array(
           'error' => 'field_example_invalid',
@@ -373,7 +372,7 @@ function cmis_views_download_handler($object_id) {
   }
 
   drupal_add_http_header('Cache-Control', 'no-cache, must-revalidate');
-  drupal_add_http_header('Content-type:', $object->properties['cmis:contentStreamMimeType']);
+  drupal_add_http_header('Content-type', $object->properties['cmis:contentStreamMimeType']);
   if ($object->properties['cmis:contentStreamMimeType'] != 'text/html') {
     drupal_add_http_header('Content-Disposition', 'attachment; filename="'. $object->properties['cmis:name'] .'"');  
   }
@@ -464,12 +463,19 @@ function cmis_views_process_cmis_data ($variables) {
 
     $path = 'cmis/views/'.urlencode($child->properties['cmis:objectId']);
     $cmisurl = url($path, $options);
-
-    $fileproperties = _cmis_views_tidyMime($child->properties["cmis:contentStreamMimeType"]);
-    $child->properties["cmis:contentStreamMimeType"] = $fileproperties['type'];
+    if (isset($child->properties["cmis:contentStreamMimeType"])){
+      $fileproperties = _cmis_views_tidyMime($child->properties["cmis:contentStreamMimeType"]);
+	  $child->properties["cmis:contentStreamMimeType"] = $fileproperties['type'];
+    }else{
+	  $child->properties["cmis:contentStreamMimeType"] = t('Unknown');
+    }
     $child->properties["cmis:lastModificationDate"] = date("j F Y", strtotime($child->properties["cmis:lastModificationDate"]));
     $child->properties['cmis:name'] = check_plain($child->properties['cmis:name']);
-    $child->properties["cmis:contentStreamLength"] = _cmis_views_tidySize($child->properties["cmis:contentStreamLength"]);
+    if (isset($child->properties["cmis:contentStreamLength"])){
+      $child->properties["cmis:contentStreamLength"] = _cmis_views_tidySize($child->properties["cmis:contentStreamLength"]);
+    }else{
+	  $child->properties["cmis:contentStreamLength"] = t('Unknown');
+    }
     $child->properties["cmis:link"] = l($child->properties['cmis:name'], $cmisurl, array('attributes' => array('class' => 'cmislink')));
     $child->properties["cmis:path"] = $path;
     if (!empty($child->properties['cm:title'])) {
@@ -493,7 +499,19 @@ function cmis_views_process_cmis_data ($variables) {
     else {
       $child->properties['cm:description'] = NULL;
     }
-    $child->properties["cmis:link-image"] = l('<img width="64" height="64" alt="'.$child->properties['cmis:name'].'" src="'.$child->properties["cmis:filetypeimg"].'" class="alignleft">', $cmisurl, array('html' => TRUE, 'attributes' => array('class' => 'cmislink')));
+    
+    if (variable_get('cmis_views_thumbnails') != '') {
+      $thumbnails = variable_get('cmis_views_thumbnails');
+    }else{
+	  $thumbnails = 0;
+    }
+    
+    if ($thumbnails == 1 && isset($child->renditions[0]['streamId'])){
+      $thumbbinary = cmisapi_getContentStream($variables['repoId'], $child->renditions[0]['streamId']);
+	  $child->properties["cmis:link-image"] = l('<img width="64" alt="'.$child->properties['cmis:name'].'" src="data:image/gif;base64,'.base64_encode($thumbbinary).'" class="alignleft">', $cmisurl, array('html' => TRUE, 'attributes' => array('class' => 'cmislink')));
+    }else{
+      $child->properties["cmis:link-image"] = l('<img width="64" height="64" alt="'.$child->properties['cmis:name'].'" src="'.$child->properties["cmis:filetypeimg"].'" class="alignleft">', $cmisurl, array('html' => TRUE, 'attributes' => array('class' => 'cmislink')));	    
+    }
   }
   return $variables;
 }
@@ -547,15 +565,14 @@ function cmis_views_info($cmisinfo = array('cmisviewname' => '', 'uuid' => '', '
     $uuid = check_plain($cmisinfo['uuid']);
     if ($uuid) {
       $query_result = '';
-      $query_result = cache_get('cmis_views_'.$cmisinfo['cmid'], 'cache');
+      $query_result = cache_get('cmis_views_'.$uuid, 'cache');
+      if ($query_result){
+        $query_result = $query_result->data;
+      }
       if (empty($query_result)) {
-        try {
+        try { 
           $repoid = !empty($repository->repositoryId) ? $repository->repositoryId : 'default';
-          $quickquery = 'select d.*, t.* from cmis:document as d join cm:titled as t on d.cmis:objectId = t.cmis:objectId ';
-          $quickquery .= "where in_folder(d, '%s') ";
-          $quickquery .= "ORDER BY d.cmis:name ASC";
-          $query_result = cmisapi_query($repoid, sprintf($quickquery, $uuid));
-          cache_set('cmis_views_'.$cmisinfo['cmid'], $query_result, 'cache');
+          $query_result = _cmis_views_query($uuid, $repoid);
         }
         catch (CMISException $e) {
           cmis_error_handler('cmis_query', $e);
@@ -563,8 +580,7 @@ function cmis_views_info($cmisinfo = array('cmisviewname' => '', 'uuid' => '', '
         }
       }
       else{
-	    // If cache is set, we still need to get the repoid from somewhere.
-        $query_result = $query_result->data;
+	    // If cache is set, we still need to get the repoid from somewhere. should the repo details also be cached?
 	    try {
           $repoid = !empty($repository->repositoryId) ? $repository->repositoryId : 'default';
         }
@@ -573,19 +589,6 @@ function cmis_views_info($cmisinfo = array('cmisviewname' => '', 'uuid' => '', '
           $contents = t('Error connecting to CMIS repo');
         }   
       }
-      /*
-      //using getChildren is quicker - may need to modify cmis module
-       try {
-         $repoid = !empty($repository->repositoryId) ?
-         $repository->repositoryId : 'default';
-         $query_result = cmisapi_getChildren($repoid, $uuid);
-         //print_r($query_result);
-       }
-       catch (CMISException $e) {
-         cmis_error_handler('cmis_query', $e);
-         $contents = t('Error');
-       }
-      */
     }
     elseif ($query) {
       try {

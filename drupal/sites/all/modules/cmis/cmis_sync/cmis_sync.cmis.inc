@@ -97,7 +97,6 @@ function _cmis_sync_cmis_drupal_handle_updates($repository, $sync_map_type, $nod
     $drupal_node->cmis_sync_disabled = TRUE;
     
     // save Drupal node
-//    die('<pre>' . print_r($drupal_node, TRUE) . '</pre>');
     node_save($drupal_node);
     
     // update/insert changed timestamp
@@ -180,7 +179,6 @@ function _cmis_sync_cmis_drupal_handle_deletes($repository, $sync_map_type, $nod
  *  Add workflow properties
  */
 function _cmis_sync_cmis_drupal_prepare($repository, $sync_map_type, $node_type, $cmis_object) {
-//  die('<pre>' . print_r($cmis_object->properties, TRUE) .' </pre>');
   module_load_include('api.inc', 'cmis');
   
   if ($sync_map_type['enabled']) {
@@ -202,42 +200,18 @@ function _cmis_sync_cmis_drupal_prepare($repository, $sync_map_type, $node_type,
     
     // load Drupal node
     $node = node_load($drupal_nid);
-    if ($node === FALSE) {
-      $node = new \stdClass();
-      $node->language = LANGUAGE_NONE;
-      $node->status = 1;
-      $node->type = $node_type;
-    }
+    $node->type = $node_type;
     
-    if ($node_type == 'cmis_image'
-      && strpos($cmis_object->properties['cmis:contentStreamMimeType'], 'image/') === FALSE) {
-      return FALSE;
-    }
-    elseif ($node_type == 'cmis_video'
-      && strpos($cmis_object->properties['cmis:contentStreamMimeType'], 'video/') === FALSE) {
-      return FALSE;
-    }
-    elseif ($node_type != 'cmis_image' && strpos($cmis_object->properties['cmis:contentStreamMimeType'], 'image/') !== FALSE) {
-      return FALSE;
-    }
-    elseif ($node_type != 'cmis_video' && strpos($cmis_object->properties['cmis:contentStreamMimeType'], 'video/') !== FALSE) {
-      return FALSE;
-    }
     // map cmis properties to drupal node fields    
     foreach ($sync_map_type['fields'] as $node_field => $cmis_field) {
       if (is_string($cmis_field)) {
-        _cmis_sync_drupal_node_field_value($node, $node_field, $cmis_object->properties[$cmis_field], array('object' => $cmis_object));
+        _cmis_sync_drupal_node_field_value($node, $node_field, $cmis_object->properties[$cmis_field]);
       }
       elseif (is_array($cmis_field)) {
         if (array_key_exists('cmis to drupal', $cmis_field) && $cmis_field['cmis to drupal'] === FALSE) {
           continue;
         }
-        _cmis_sync_drupal_node_field_value(
-          $node,
-          $cmis_field['drupal'],
-          $cmis_object->properties[$cmis_field['cmis']],
-          array('object' => $cmis_object)
-        );
+        _cmis_sync_drupal_node_field_value($node, $cmis_field['drupal'], $cmis_object->properties[$cmis_field['cmis']]);
       }
       else {
         throw new CMISException(t('Unknown field map type. Expects "string" or "array". Received "@type"',
@@ -245,70 +219,14 @@ function _cmis_sync_cmis_drupal_prepare($repository, $sync_map_type, $node_type,
       }
     }
     
-    if ($node_type == 'cmis_video') {
-      $uuid_list = explode(':', $cmis_object->uuid);
-      $uuid = array_pop($uuid_list);
-      $connection = Database::getConnection('default', 'alfresco');
-      $find_id = $connection->select('alf_node', 'n');
-      $find_id->fields('n', array('id'))->condition('uuid', $uuid);
-      $result = $find_id->execute();
-      $row = $result->fetch();
-      if ($row) {
-        $find_children = $connection->select('alf_child_assoc', 'a');
-        $find_children->fields('a', array('qname_localname'))
-          ->condition('a.parent_node_id', $row->id)
-          ->condition('a.qname_localname', array('imgpreview', 'h264preview'), 'IN');
-        $find_children->leftJoin('alf_node', 'n', 'a.child_node_id=n.id');
-        $find_children->fields('n', array('uuid'));
-        $children = $find_children->execute();
-        $imgprev_id = $children->fetchAll();
-        if ($imgprev_id) {
-          foreach ($imgprev_id as $extra_data) {
-            if ($extra_data->qname_localname == 'imgpreview') {
-              $field_name = 'field_image';
-            }
-            else {
-              $field_name = 'field_file';
-            }
-            $content = cmisapi_getContentStream(
-              $repository->repositoryId,
-              'workspace://SpacesStore/' . $extra_data->uuid
-            );
-            $field_info = field_info_field($field_name);
-            $instance_info = field_info_instance('node', 'field_image', $node->type);
-            $path = $field_info['settings']['uri_scheme'] . '://';
-
-            if (strlen($instance_info['settings']['file_directory']) > 0) {
-              // Set up and create path if it is not already set up
-              $path .= $instance_info['settings']['file_directory'] . '/';
-              if (!is_dir($path)) {
-                drupal_mkdir($path, NULL, TRUE);
-              }
-            }
-            // add an image 
-            $filename = $path . uniqid('cmis_sync_');
-            if ($extra_data->qname_localname == 'h264preview') {
-              $filename .= '.mp4';
-            }
-            $file = file_save_data($content, $filename);
-            if ($file) {
-              $file->display = 1;
-              $node->{$field_name}[LANGUAGE_NONE][0] = (array)$file;
-            }
-          }
-            
-        }
-      }
- 
-    }
-    
     // fix node title
     if (!isset($node->title)) {
       $node->title = $cmis_object->properties['cmis:name'];
     }
     
+    
     // load content field
-    if (array_key_exists('content_field', $sync_map_type) && $sync_map_type['content_field']) {
+    if (array_key_exists('content_field', $sync_map_type)) {
       $cmis_content_context = array();
       $cmis_content_context['file'] = array('mime' => $cmis_object->properties['cmis:contentStreamMimeType']);
       

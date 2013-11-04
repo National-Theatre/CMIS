@@ -68,7 +68,7 @@ function _cmis_sync_drupal_cmis_update($node, $op) {
           foreach ($result as $row) {        
             try {
               // delete CMIS reference object content
-              $cmis_object_properties = cmisapi_getProperties($cmis_object->repositoryId, $row->cmis_objectid);
+              $cmis_object_properties = cmisapi_getProperties($cmis_object->repositoryId, $row->cmis_objectId);
               cmisapi_deleteObject($cmis_object->repositoryId, $cmis_object_properties->id);
               
               // delete sync refs 
@@ -200,7 +200,7 @@ function _cmis_sync_drupal_node_field_value(&$node, $field_name, $field_value = 
     $fields = field_info_instances('node', $node->type);
     $value = NULL;
     if (array_key_exists($field_name, $fields)) {
-      if ($field_name != NULL && isset($node->{$field_name})) {
+      if ($field_name != NULL){
         $content_field = $node->{$field_name};
       }
       switch($fields[$field_name]['widget']['type']) {
@@ -260,25 +260,6 @@ function _cmis_sync_drupal_node_field_value(&$node, $field_name, $field_value = 
             $node->{$field_name}['und'][0]['format'] = 'filtered_html';
           }
           break;
-
-        case 'text_textfield':
-          if ($field_value == NULL && !empty($content_field)) {
-            $value = $content_field[LANGUAGE_NONE][0]['value'];
-          }
-          elseif ($field_value != NULL) {
-            $node->$field_name = array();
-            $node->{$field_name}[LANGUAGE_NONE][0]['value'] = $field_value;
-          }
-          break;
-
-        case 'cmis_field_browser':
-          if ($field_value != NULL) {
-            $node->$field_name = array();
-            $node->{$field_name}[LANGUAGE_NONE][0]['path'] = $field_value;
-            $node->{$field_name}[LANGUAGE_NONE][0]['title'] = $context['object']->properties['cmis:name'];
-          }
-          break;
-
         case 'date':
         case 'datestamp':
         case 'datetime':
@@ -303,11 +284,11 @@ function _cmis_sync_drupal_node_field_value(&$node, $field_name, $field_value = 
     }
     else {
       // regular node field value
-      if ($field_value == NULL && isset($node->{$field_name})) {
+      if ($field_value == NULL) {
         $value = $node->{$field_name};
       }
-      elseif ($field_value != NULL) {
-        //$node->$field_name = $field_value;
+      else {
+        $node->$field_name = $field_value;
       }
     }
     

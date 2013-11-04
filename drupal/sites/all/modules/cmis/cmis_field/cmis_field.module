@@ -90,7 +90,7 @@ function cmis_field_field_widget_info() {
  * Implementation of hook_field_widget_form()
  *
  * @param $element - the form element array
- * @param $edit - 
+ * @param $edit -
  * @param $form_state - form state array
  * @param $form - form array
  * @return array - form element
@@ -111,12 +111,13 @@ function cmis_field_field_widget_form(&$form, &$form_state, $field, $instance, $
     '#title_display' => 'before',
     '#title' => check_plain($instance['label']),
   );
+
   $element['path'] += array(
     '#type' => 'hidden',
     '#attributes' => array('class' => array('edit-field-cmis-path', 'search-form')),
     '#default_value' => $path,
   );
-  
+
   $element['#attached']['js'] = array(
     array('data' => drupal_get_path('module', 'cmis_field') . '/js/cmis_field.js'),
     array('data' => array('cmispath' => $instance['settings']['cmis_field_rootFolderPath']), 'type' => 'setting'),
@@ -126,12 +127,12 @@ function cmis_field_field_widget_form(&$form, &$form_state, $field, $instance, $
 
 /**
  * Implementation of hook_field_formatter_info()
- * 
+ *
  * @return array
  */
 function cmis_field_field_formatter_info() {
-  return array( 
-    'cmis_field_link' => array( 
+  return array(
+    'cmis_field_link' => array(
        'label' => t('CMIS browser'),
        'field types' => array('cmis_field_path')
     )

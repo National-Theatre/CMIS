@@ -208,6 +208,7 @@ class CMISRepositoryWrapper {
 		// RRM -- NEED TO ADD ALLOWABLEACTIONS
 		$retval = new stdClass();
 		$retval->links=CMISRepositoryWrapper::getLinksArray($xmlnode);
+		$retval->renditions=array();
         $retval->properties=array();
 		$prop_nodes = $xmlnode->getElementsByTagName("object")->item(0)->getElementsByTagName("properties")->item(0)->childNodes;
 		foreach ($prop_nodes as $pn) {
@@ -216,6 +217,22 @@ class CMISRepositoryWrapper {
 			  @$retval->properties[$pn->attributes->getNamedItem("propertyDefinitionId")->nodeValue] = $pn->getElementsByTagName("value")->item(0)->nodeValue;
 			}
 		}
+		$renditions = $xmlnode->getElementsByTagName("object")->item(0)->getElementsByTagName("rendition");
+		$renditionArray = array();
+		// Add renditions to CMIS object
+		$i = 0;
+		if($renditions->length > 0){
+		  foreach ($renditions as $rendition) {
+		    $rend_nodes = $rendition->childNodes;
+            foreach ($rend_nodes as $rend){
+              if ($rend->localName != NULL){
+	            $renditionArray[$i][$rend->localName] = $rend->nodeValue;
+              }
+            }
+            $i++;        
+	      }
+		}
+		$retval->renditions = $renditionArray;
 		
 		$properties = $xmlnode->getElementsByTagName("object")->item(0)->getElementsByTagName("properties")->item(0);
 		// hack in Alfresco Aspect Properties
@@ -495,8 +512,10 @@ class CMISService extends CMISRepositoryWrapper {
 
 	function getChildren($objectId,$options=array()) {
 		$myURL = $this->getLink($objectId,"down");
-		//TODO: Need GenURLQueryString Utility
-		$ret=$this->doGet($myURL);
+        if (count($options) > 0) {
+          $myURL.= '&'.urldecode(http_build_query($options));
+        }
+        $ret = $this->doGet($myURL);
 		$objs=$this->extractObjectFeed($ret->body);
 		$this->cacheFeedInfo($objs);
 		return $objs;
@@ -504,26 +523,33 @@ class CMISService extends CMISRepositoryWrapper {
 
 	function getFolderParent($objectId,$options=array()) { //yes
 		$myURL = $this->getLink($objectId,"up");
-		//TODO: Need GenURLQueryString Utility
-		$ret=$this->doGet($myURL);
-		$obj=$this->extractObjectEntry($ret->body);
+        if (count($options) > 0) {
+          $myURL.= '&'.urldecode(http_build_query($options));
+        }
+        $ret = $this->doGet($myURL);
+        $obj=$this->extractObjectEntry($ret->body);
 		$this->cacheEntryInfo($obj);
 		return $obj;
 	}
 
 	function getObjectParents($objectId,$options=array()) { // yes
 		$myURL = $this->getLink($objectId,"up");
-		//TODO: Need GenURLQueryString Utility
-		$ret=$this->doGet($myURL);
-		$objs=$this->extractObjectFeed($ret->body);
+        if (count($options) > 0) {
+          $myURL.= '&'.urldecode(http_build_query($options));
+        }
+        $ret = $this->doGet($myURL);
+        $objs=$this->extractObjectFeed($ret->body);
 		$this->cacheFeedInfo($objs);
 		return $objs;
 	}
 
 	function getCheckedOutDocs($options=array()) {
  		$obj_url = $this->workspace->collections['checkedout'];
-		$ret = $this->doGet($obj_url);
-		$objs=$this->extractObjectFeed($ret->body);
+        if (count($options) > 0) {
+          $myURL.= '&'.urldecode(http_build_query($options));
+        }
+        $ret = $this->doGet($myURL);
+   	    $objs=$this->extractObjectFeed($ret->body);
 		$this->cacheFeedInfo($objs);
 		return $objs;
 	}
@@ -555,7 +581,13 @@ xmlns:cmisra="http://docs.oasisopen.org/ns/cmis/restatom/200908/">
 		if (!isset($query_template)) {
 			$query_template = CMISService::getQueryTemplate();
 		}
-		$hash_values=$options;
+		$default_hash_values = array(
+          "includeAllowableActions" => "true",
+          "searchAllVersions" => "false",
+          "maxItems" => 10,
+          "skipCount" => 0
+        );
+		$hash_values=array_merge($default_hash_values, $options);
 		$hash_values['q'] = $q;
 		$post_value = CMISRepositoryWrapper::processTemplate($query_template,$hash_values);
 		$ret = $this->doPost($this->workspace->collections['query'],$post_value,MIME_CMIS_QUERY);
@@ -753,7 +785,6 @@ xmlns:cmisra="http://docs.oasis-open.org/ns/cmis/restatom/200908/">
 			$hash_values["CONTENT"]=CMISService::getContentEntry($content,$content_type);
 		}
 		
-		debug(preg_replace("/[^A-Za-z0-9\s.&; ]/", '', htmlentities($objectName)));
 		if (!isset($hash_values['title'])) {
 			$hash_values['title'] = preg_replace("/[^A-Za-z0-9\s.&; ]/", '', htmlentities($objectName));
 		}

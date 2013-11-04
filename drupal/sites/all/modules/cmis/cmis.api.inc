@@ -92,7 +92,7 @@ function cmisapi_getAllowableActions($repositoryId, $objectId, $options = array(
   return cmis_vendor_invoke('getAllowableActions', $repositoryId, $objectId, $options);
 }
 
-function cmisapi_getRenditions($repositoryId, $objectId, $options = array('renditionFilter' => "*")) {
+function cmisapi_getRenditions($repositoryId, $objectId, $options = array()) {
   return cmis_vendor_invoke('getProperties', $repositoryId, $objectId, $options);
 }
 
@@ -116,7 +116,7 @@ function cmisapi_deleteObject($repositoryId, $objectId, $options = array()) {
   return cmis_vendor_invoke('deleteObject', $repositoryId, $objectId, $options);
 }
 
-function cmisapi_deteleTree($repositoryId, $folderId, $unfileNonfolderObjects) {
+function cmisapi_deleteTree($repositoryId, $folderId, $unfileNonfolderObjects) {
   return cmis_vendor_invoke('deleteTree', $repositoryId, $folderId, $unfileNonfolderObjects);
 }
 

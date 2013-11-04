@@ -70,23 +70,26 @@ function _cmis_views_tidySize($bytes, $precision = 0) {
   return round($bytes, $precision) . ' ' . $units[$pow];
 }
 
+/* This isn't working properly, need a unique identifier to use with cache */
+
 function _cmis_views_query($uuid, $repoid){
-  $query_result = &drupal_static(__FUNCTION__);
-  if (!isset($query_result)) {
+  $query_result = cache_get('cmis_views_'.$uuid, 'cache');
+  if (!$query_result) {
     $query_result = '';
     try {
-      $repoid = !empty($repository->repositoryId) ? $repository->repositoryId : 'default';
-      // Build a query - this will be faster than using stored wildcard query.
+      $repoid = !empty($repository->repositoryId) ? $repository->repositoryId : 'default';      
       $quickquery = 'select d.*, t.* from cmis:document as d join cm:titled as t on d.cmis:objectId = t.cmis:objectId ';
       $quickquery .= "where in_folder(d, '%s') ";
       $quickquery .= "ORDER BY d.cmis:name ASC";
-      $query_result = cmisapi_query($repoid, sprintf($quickquery, $uuid));
-      cache_set('cmis_views_data', $query_result, 'cache');
+      $query_result = cmisapi_query($repoid, sprintf($quickquery, $uuid), $options = array('renditionFilter' => "cmis:thumbnail"));
+      cache_set('cmis_views_'.$uuid, $query_result, 'cache', $expire = CACHE_TEMPORARY);
     }
       catch (CMISException $e) {
       cmis_error_handler('cmis_query', $e);
       $contents = t('Error');
     }
+  }else{
+    $query_result = $query_result->data;
   }
   return $query_result;
 }
